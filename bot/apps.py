@@ -14,6 +14,7 @@ from __future__ import annotations
 import platform
 import subprocess
 import webbrowser
+from urllib.parse import quote_plus
 
 # name -> URL for common websites the user asked for.
 SITES = {
@@ -72,3 +73,10 @@ def open_target(text: str) -> str:
             return f"Opening {name.title()}."
 
     return ""  # nothing matched -> let the router try other intents
+
+
+def google_search(query: str) -> str:
+    """Open Google in the browser with `query` already searched."""
+    url = f"https://www.google.com/search?q={quote_plus(query)}"
+    webbrowser.open(url)
+    return f"Searching Google for {query}."

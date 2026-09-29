@@ -6,6 +6,7 @@ Run:
 """
 
 import unittest
+from unittest import mock
 
 from bot.tts import clean_for_speech
 from bot.websearch import format_context, format_sources
@@ -64,10 +65,25 @@ class TestRouter(unittest.TestCase):
         self.assertEqual(self.router.brain.calls[-1],
                          "how do i reverse a list in python")
 
-    def test_search_intent_calls_brain_with_context(self):
-        # web_search will return [] offline, so search reports no results.
-        reply = self.router.route("search latest ai news")
-        self.assertIsInstance(reply, Reply)
+    def test_search_intent_opens_google(self):
+        # Patch the browser launch and the network call so nothing real happens.
+        with mock.patch("bot.apps.google_search", return_value="") as g, \
+             mock.patch("bot.router.web_search", return_value=[]):
+            reply = self.router.route("search oriental institute of science")
+            g.assert_called_once_with("oriental institute of science")
+            self.assertIsInstance(reply, Reply)
+
+    def test_google_keyword_searches_not_opens_homepage(self):
+        with mock.patch("bot.apps.google_search", return_value="") as g, \
+             mock.patch("bot.router.web_search", return_value=[]):
+            self.router.route("google python tips")
+            g.assert_called_once_with("python tips")
+
+    def test_open_google_opens_site(self):
+        with mock.patch("bot.apps.webbrowser.open") as wb:
+            reply = self.router.route("open google")
+            wb.assert_called_once()
+            self.assertIn("Google", reply.text)
 
     def test_spoken_summary_hides_code(self):
         spoken = _spoken_summary("Sure.\n```py\nx=1\n```")

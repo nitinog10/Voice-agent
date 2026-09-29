@@ -65,34 +65,48 @@ class CommandRouter:
         if any(w in text for w in EXIT_WORDS):
             return Reply("Goodbye!", "Goodbye!", should_exit=True)
 
-        # 2. Open an app or website
-        if text.startswith("open") or any(h in text for h in _OPEN_HINTS):
-            result = apps.open_target(text)
-            if result:
-                return Reply(result, result)
-
-        # 3. Explicit web search
+        # 2. Explicit web search  ("search ...", "google ...", "look up ...")
+        #    Checked before "open" so "google python tips" searches, not opens.
         m = _SEARCH_RE.match(text)
         if m:
             return self._search(m.group(2).strip())
+
+        # 3. Open an app or website ("open ...", "launch ...", or a bare app name)
+        if self._is_open_command(text):
+            result = apps.open_target(text)
+            if result:
+                return Reply(result, result)
 
         # 4. Default: ask the LLM (general Q&A, coding, brainstorming)
         full = self.brain.answer(text)
         return Reply(full, _spoken_summary(full))
 
+    @staticmethod
+    def _is_open_command(text: str) -> bool:
+        """True only for real 'open' intents, not any sentence mentioning a site."""
+        if text.startswith(("open", "launch", "go to", "start ")):
+            return True
+        first = text.split(maxsplit=1)[0] if text else ""
+        return first in _OPEN_HINTS
+
     def _search(self, query: str) -> Reply:
         if not query:
             return Reply("What would you like me to search for?",
                         "What would you like me to search for?")
+        # Open Google in the browser with the query already searched.
+        apps.google_search(query)
+        # Also fetch results so we can speak a short grounded summary.
         hits = web_search(query)
         if not hits:
-            return Reply(f"I couldn't find web results for {query}.",
-                        f"I couldn't find web results for {query}.")
+            msg = f"I've opened Google and searched for {query}."
+            return Reply(msg, msg)
         context = format_context(hits)
         answer = self.brain.answer(
             f"Summarise the web results for '{query}':\n{context}",
             ground_with_search=False,
         )
         sources = format_sources(hits)
-        full = f"{answer}\n\n{sources}" if sources else answer
-        return Reply(full, _spoken_summary(answer))
+        full = (f"Opened Google for '{query}'.\n\n{answer}"
+                + (f"\n\n{sources}" if sources else ""))
+        spoken = f"I've opened Google for {query}. {_spoken_summary(answer)}"
+        return Reply(full, spoken)
