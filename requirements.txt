@@ -1,0 +1,15 @@
+# Terminal Voice Assistant — Python dependencies
+# Install:  pip install -r requirements.txt
+# If PyAudio fails to build on Windows:  pip install pipwin && pipwin install pyaudio
+
+# --- Speech ---
+SpeechRecognition      # microphone speech-to-text (Google free recogniser)
+pyaudio                # microphone access backend for SpeechRecognition
+pyttsx3                # offline text-to-speech (Windows SAPI5 female voice)
+
+# --- Reasoning brain ---
+boto3                  # AWS Bedrock (Amazon Nova) Converse API client
+python-dotenv          # load configuration & AWS keys from the .env file
+
+# --- Web search ---
+duckduckgo-search      # real-time web results (no API key); package also aka 'ddgs'
